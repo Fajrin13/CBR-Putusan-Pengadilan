@@ -1,2 +1,2 @@
-# UAS_CBR_Nur-Fajrin_201910370311383
+# CBR-Putusan-Pengadilan
 Sistem Case-Based Reasoning untuk Analisis Putusan Pengadilan Pidana Narkotika.
