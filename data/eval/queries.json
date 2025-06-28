@@ -1,0 +1,57 @@
+[
+  {
+    "query_id": "Q1",
+    "query": "Terdakwa menyimpan sabu dalam bungkus plastik",
+    "top_5_case_ids": [
+      "putusan_5220_k_pid.sus_2023_20240129172332",
+      "putusan_1663_k_pid.sus_2020_20250627110917",
+      "putusan_6307_k_pid.sus_2023_20240129172151",
+      "putusan_5512_k_pid.sus_2023_20240129171404",
+      "putusan_5474_k_pid.sus_2023_20240129172307"
+    ]
+  },
+  {
+    "query_id": "Q2",
+    "query": "Terdakwa menggunakan narkotika jenis ganja",
+    "top_5_case_ids": [
+      "putusan_1663_k_pid.sus_2020_20250627110917",
+      "putusan_5220_k_pid.sus_2023_20240129172332",
+      "putusan_4598_k_pid.sus_2023_20240129171918",
+      "putusan_4815_k_pid.sus_2023_20240129171646",
+      "putusan_6307_k_pid.sus_2023_20240129172151"
+    ]
+  },
+  {
+    "query_id": "Q3",
+    "query": "Pengedar narkotika dengan barang bukti 3 gram sabu",
+    "top_5_case_ids": [
+      "putusan_4598_k_pid.sus_2023_20240129171918",
+      "putusan_4815_k_pid.sus_2023_20240129171646",
+      "putusan_6307_k_pid.sus_2023_20240129172151",
+      "putusan_6303_k_pid.sus_2023_20240129172218",
+      "putusan_5513_k_pid.sus_2023_20240129171531"
+    ]
+  },
+  {
+    "query_id": "Q4",
+    "query": "Menjual narkoba tanpa izin resmi",
+    "top_5_case_ids": [
+      "putusan_5635_k_pid.sus_2023_20240129172231",
+      "putusan_5220_k_pid.sus_2023_20240129172332",
+      "putusan_585_pid.sus_2020_pt_mdn_20250627111448",
+      "putusan_5513_k_pid.sus_2023_20240129171531",
+      "putusan_3550_k_pid.sus_2020_20250627110559"
+    ]
+  },
+  {
+    "query_id": "Q5",
+    "query": "Kepemilikan narkotika oleh anak di bawah umur",
+    "top_5_case_ids": [
+      "putusan_999_pk_pid.sus_2023_20240129172123",
+      "putusan_4598_k_pid.sus_2023_20240129171918",
+      "putusan_4815_k_pid.sus_2023_20240129171646",
+      "putusan_2667_k_pid.sus_2020_20250627110812",
+      "putusan_5635_k_pid.sus_2023_20240129172231"
+    ]
+  }
+]

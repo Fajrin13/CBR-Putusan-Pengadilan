@@ -1,0 +1,6 @@
+query_id,predicted_solution,top_5_case_ids
+Q1,Amar putusan tidak ditemukan,"['putusan_5220_k_pid.sus_2023_20240129172332', 'putusan_1663_k_pid.sus_2020_20250627110917', 'putusan_6307_k_pid.sus_2023_20240129172151', 'putusan_5512_k_pid.sus_2023_20240129171404', 'putusan_5474_k_pid.sus_2023_20240129172307']"
+Q2,Amar putusan tidak ditemukan,"['putusan_1663_k_pid.sus_2020_20250627110917', 'putusan_5220_k_pid.sus_2023_20240129172332', 'putusan_4598_k_pid.sus_2023_20240129171918', 'putusan_4815_k_pid.sus_2023_20240129171646', 'putusan_6307_k_pid.sus_2023_20240129172151']"
+Q3,Amar putusan tidak ditemukan,"['putusan_4598_k_pid.sus_2023_20240129171918', 'putusan_4815_k_pid.sus_2023_20240129171646', 'putusan_6307_k_pid.sus_2023_20240129172151', 'putusan_6303_k_pid.sus_2023_20240129172218', 'putusan_5513_k_pid.sus_2023_20240129171531']"
+Q4,Amar putusan tidak ditemukan,"['putusan_5635_k_pid.sus_2023_20240129172231', 'putusan_5220_k_pid.sus_2023_20240129172332', 'putusan_585_pid.sus_2020_pt_mdn_20250627111448', 'putusan_5513_k_pid.sus_2023_20240129171531', 'putusan_3550_k_pid.sus_2020_20250627110559']"
+Q5,Amar putusan tidak ditemukan,"['putusan_999_pk_pid.sus_2023_20240129172123', 'putusan_4598_k_pid.sus_2023_20240129171918', 'putusan_4815_k_pid.sus_2023_20240129171646', 'putusan_2667_k_pid.sus_2020_20250627110812', 'putusan_5635_k_pid.sus_2023_20240129172231']"
