@@ -1,0 +1,359 @@
+1. Mengekstrak isi dari zip file dan Membersihkan pdf. menjadi txt.
+
+import zipfile
+import os
+
+# Define paths
+zip_path = "Putusan.zip"
+extract_path = "raw"
+
+# Extract the ZIP file
+with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+    zip_ref.extractall(extract_path)
+
+# List extracted files
+extracted_files = os.listdir(extract_path)
+print(f"Contents of '{extract_path}': {extracted_files}")
+
+# List contents of the nested directory if it exists
+nested_extracted_path = os.path.join(extract_path, 'Putusan')
+if os.path.exists(nested_extracted_path):
+    nested_files_list = os.listdir(nested_extracted_path)
+    print(f"Contents of '{nested_extracted_path}': {nested_files_list[:10]}...") # Show first 10 files
+
+
+membersihkan
+
+!pip install PyMuPDF
+
+import fitz  # PyMuPDF
+import re
+import os # Import os here as well
+
+# Define the path to the directory containing the PDF files
+relative_nested_path = "raw/Putusan/"
+nested_path = os.path.join(os.getcwd(), relative_nested_path)
+
+
+# Get a list of files in the directory
+nested_files = os.listdir(nested_path)
+
+
+# Output directory for cleaned text files
+output_dir = "/mnt/data/data/raw/cleaned"
+os.makedirs(output_dir, exist_ok=True)
+
+# Simple cleaning function
+def clean_text(text):
+    text = re.sub(r'\s+', ' ', text)  # Remove excessive whitespace
+    text = re.sub(r'\n', ' ', text) # Remove newlines
+    text = text.strip()  # Remove leading/trailing whitespace
+    return text
+
+# Convert PDF to cleaned text
+log = []
+for filename in nested_files:
+    if filename.endswith('.pdf'):
+        pdf_path = os.path.join(nested_path, filename)
+        txt_path = os.path.join(output_dir, filename.replace('.pdf', '.txt'))
+
+        try:
+            with fitz.open(pdf_path) as doc:
+                text = ""
+                for page in doc:
+                    text += page.get_text()
+
+            cleaned = clean_text(text)
+            with open(txt_path, 'w', encoding='utf-8') as f:
+                f.write(cleaned)
+            log.append(f"{filename}: success")
+        except Exception as e:
+            log.append(f"{filename}: error - {str(e)}")
+
+# Show a sample of the log
+log[:10]
+
+
+2. Mengekstrak metadata pada txt.
+
+import pandas as pd
+
+# Ambil daftar file teks yang sudah dibersihkan
+cleaned_files = os.listdir(output_dir)
+
+# Struktur data akhir
+data = []
+
+# Fungsi ekstraksi metadata sederhana berbasis pola teks
+def extract_metadata(text):
+    metadata = {
+        "no_perkara": None,
+        "tanggal": None,
+        "jenis_perkara": None,
+        "pasal": None,
+        "pihak": None,
+        "ringkasan_fakta": None,
+        "text_full": text[:1000]  # Simpan cuplikan awal (maks 1000 karakter)
+    }
+
+    # Ekstraksi No. Perkara (biasa di awal atau pakai "Nomor" atau "No")
+    match_no = re.search(r'(Nomor|No\.?)\s*[:\-]?\s*([A-Za-z0-9./-]+)', text, re.IGNORECASE)
+    if match_no:
+        metadata["no_perkara"] = match_no.group(2)
+
+    # Ekstraksi tanggal (format umum: DD-MM-YYYY atau DD Month YYYY)
+    match_date = re.search(r'(\d{1,2}[-/]\d{1,2}[-/]\d{2,4})|(\d{1,2}\s+\w+\s+\d{4})', text)
+    if match_date:
+        metadata["tanggal"] = match_date.group(0)
+
+    # Jenis perkara (berdasarkan nama folder / asumsi dari nama file)
+    metadata["jenis_perkara"] = "Pidana Khusus - Narkotika"  # Asumsi topik proyek
+
+    # Ekstrak pasal (pola "Pasal 112" dsb)
+    match_pasal = re.findall(r'Pasal\s+\d+[A-Za-z]?', text)
+    if match_pasal:
+        metadata["pasal"] = ', '.join(set(match_pasal))
+
+    # Ekstraksi nama pihak (asal coba berdasarkan "Terdakwa"/"Penggugat" dst.)
+    match_pihak = re.search(r'Terdakwa\s*[:\-]?\s*(.*?)\n', text, re.IGNORECASE)
+    if match_pihak:
+        metadata["pihak"] = match_pihak.group(1)
+
+    # Ringkasan fakta awal (ambil 2-3 kalimat awal)
+    sentences = re.split(r'(?<=[.!?]) +', text)
+    metadata["ringkasan_fakta"] = ' '.join(sentences[:3])
+
+    return metadata
+
+# Proses semua file
+for fname in cleaned_files:
+    fpath = os.path.join(output_dir, fname)
+    with open(fpath, 'r', encoding='utf-8') as f:
+        text = f.read()
+    metadata = extract_metadata(text)
+    metadata["case_id"] = fname.replace(".txt", "")
+    data.append(metadata)
+
+# Simpan ke CSV
+df = pd.DataFrame(data)
+processed_dir = "/mnt/data/data/processed"
+os.makedirs(processed_dir, exist_ok=True)
+csv_path = os.path.join(processed_dir, "cases.csv")
+df.to_csv(csv_path, index=False)
+
+df.head()
+
+3. Case Retrieval
+
+import pandas as pd
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.metrics.pairwise import cosine_similarity
+import numpy as np
+import json
+
+# Load data kasus
+df = pd.read_csv('cases.csv')
+
+# Gunakan kolom 'ringkasan_fakta' sebagai representasi teks
+documents = df['ringkasan_fakta'].fillna('').tolist()
+
+# Buat vektor TF-IDF
+vectorizer = TfidfVectorizer()
+doc_vectors = vectorizer.fit_transform(documents)
+
+# Simpan case_id ke dalam list
+case_ids = df['case_id'].tolist()
+
+# Fungsi retrieve
+def retrieve(query: str, k: int = 5):
+    query_vec = vectorizer.transform([query])
+    sim_scores = cosine_similarity(query_vec, doc_vectors).flatten()
+    top_k_idx = np.argsort(sim_scores)[::-1][:k]
+    top_k_ids = [case_ids[i] for i in top_k_idx]
+    return top_k_ids, sim_scores[top_k_idx]
+
+# Contoh uji: 5 query
+queries = [
+    {"query_id": "Q1", "query": "Terdakwa menyimpan sabu dalam bungkus plastik"},
+    {"query_id": "Q2", "query": "Terdakwa menggunakan narkotika jenis ganja"},
+    {"query_id": "Q3", "query": "Pengedar narkotika dengan barang bukti 3 gram sabu"},
+    {"query_id": "Q4", "query": "Menjual narkoba tanpa izin resmi"},
+    {"query_id": "Q5", "query": "Kepemilikan narkotika oleh anak di bawah umur"},
+]
+
+# Simpan hasil ke file JSON
+eval_results = []
+for q in queries:
+    top_ids, _ = retrieve(q["query"], k=5)
+    eval_results.append({
+        "query_id": q["query_id"],
+        "query": q["query"],
+        "top_5_case_ids": top_ids
+    })
+
+# Simpan ke file JSON
+os.makedirs('./data/eval', exist_ok=True)
+with open('./data/eval/queries.json', 'w', encoding='utf-8') as f:
+    json.dump(eval_results, f, indent=2, ensure_ascii=False)
+
+print("✅ Retrieval selesai. Hasil disimpan di: /data/eval/queries.json")
+
+
+
+4. Solution Reuse
+
+import pandas as pd
+import json
+from collections import Counter
+
+# Load data kasus
+df_cases = pd.read_csv('cases.csv')
+case_text_map = dict(zip(df_cases['case_id'], df_cases['text_full']))
+
+# Simulasi: Ambil kalimat berisi amar putusan sebagai "solusi"
+def extract_amar(text):
+    for line in text.split('.'):
+        if 'menjatuhkan pidana' in line.lower() or 'dijatuhi hukuman' in line.lower():
+            return line.strip()
+    return "Amar putusan tidak ditemukan"
+
+# Bangun dictionary solusi
+case_solutions = {cid: extract_amar(text) for cid, text in case_text_map.items()}
+
+# Fungsi majority voting
+def predict_outcome(query: str):
+    top_k, _ = retrieve(query, k=5)  # menggunakan fungsi dari Tahap 3
+    solusi_top_k = [case_solutions.get(cid, "") for cid in top_k]
+    solusi_terpilih = Counter(solusi_top_k).most_common(1)[0][0]
+    return solusi_terpilih, top_k
+
+# Uji prediksi pada 5 query sebelumnya
+with open('./data/eval/queries.json', 'r', encoding='utf-8') as f:
+    queries = json.load(f)
+
+predictions = []
+for q in queries:
+    predicted_solution, top_cases = predict_outcome(q['query'])
+    predictions.append({
+        "query_id": q['query_id'],
+        "predicted_solution": predicted_solution,
+        "top_5_case_ids": top_cases
+    })
+
+# Simpan hasil prediksi ke CSV
+df_pred = pd.DataFrame(predictions)
+os.makedirs('./data/results', exist_ok=True)
+df_pred.to_csv('./data/results/predictions.csv', index=False)
+
+print("✅ Prediksi selesai. Hasil disimpan di: /data/results/predictions.csv")
+
+
+5. Evaluasi Retrieval & Prediksi
+
+import pandas as pd
+from sklearn.metrics import precision_score, recall_score, f1_score
+
+# --------------------
+# Simulasi: Buat ground truth manual
+# (Ganti dengan file sebenarnya jika ada label hasil putusan)
+ground_truth_data = {
+    "Q1": "Terdakwa dijatuhi pidana penjara selama 5 tahun",
+    "Q2": "Terdakwa dijatuhi hukuman 4 tahun penjara",
+    "Q3": "Menjatuhkan pidana kepada terdakwa selama 6 tahun",
+    "Q4": "Menjatuhkan pidana 3 tahun dan denda",
+    "Q5": "Amar putusan tidak ditemukan"
+}
+
+# --------------------
+# Load hasil prediksi
+df_pred = pd.read_csv('./data/results/predictions.csv')
+
+# Bandingkan prediksi dengan label manual
+y_true = []
+y_pred = []
+
+for _, row in df_pred.iterrows():
+    qid = row['query_id']
+    pred = row['predicted_solution']
+    true = ground_truth_data.get(qid, "")
+
+    # Jika isi kalimat putusan mirip → anggap benar
+    if true in pred or pred in true:
+        y_true.append(1)
+        y_pred.append(1)
+    else:
+        y_true.append(1)
+        y_pred.append(0)
+
+# Hitung metrik
+precision = precision_score(y_true, y_pred)
+recall = recall_score(y_true, y_pred)
+f1 = f1_score(y_true, y_pred)
+accuracy = sum([1 if a == b else 0 for a, b in zip(y_true, y_pred)]) / len(y_true)
+
+# Simpan hasil evaluasi
+eval_df = pd.DataFrame([{
+    "Accuracy": accuracy,
+    "Precision": precision,
+    "Recall": recall,
+    "F1-Score": f1
+}])
+eval_df.to_csv('./data/eval/prediction_metrics.csv', index=False)
+
+print("✅ Evaluasi selesai. Hasil disimpan di: /data/eval/prediction_metrics.csv")
+print(eval_df)
+
+eval_df
+
+
+tabel top kasus dan  skor kemiripan
+
+import json
+import pandas as pd
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.metrics.pairwise import cosine_similarity
+import numpy as np
+
+# Load data kasus
+df = pd.read_csv('cases.csv')
+
+# Gunakan kolom 'ringkasan_fakta' sebagai representasi teks
+documents = df['ringkasan_fakta'].fillna('').tolist()
+
+# Buat vektor TF-IDF
+vectorizer = TfidfVectorizer()
+doc_vectors = vectorizer.fit_transform(documents)
+
+# Simpan case_id ke dalam list
+case_ids = df['case_id'].tolist()
+
+# Fungsi retrieve
+def retrieve(query: str, k: int = 5):
+    query_vec = vectorizer.transform([query])
+    sim_scores = cosine_similarity(query_vec, doc_vectors).flatten()
+    top_k_idx = np.argsort(sim_scores)[::-1][:k]
+    top_k_ids = [case_ids[i] for i in top_k_idx]
+    return top_k_ids, sim_scores[top_k_idx]
+
+
+# Load queries from the JSON file
+with open('./data/eval/queries.json', 'r', encoding='utf-8') as f:
+    queries = json.load(f)
+
+# Tampilkan tabel top kasus dan skor kemiripan untuk setiap query
+results_list = []
+for q in queries:
+    query_text = q["query"]
+    # Assuming 'retrieve' function is defined in a previous cell and accessible
+    top_ids, scores = retrieve(query_text, k=5)
+
+    for case_id, score in zip(top_ids, scores):
+        results_list.append({
+            "Query": query_text,
+            "Top Case ID": case_id,
+            "Similarity Score": score
+        })
+
+df_results = pd.DataFrame(results_list)
+print("\nTabel Top Kasus dan Skor Kemiripan:")
+df_results
